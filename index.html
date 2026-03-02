@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>소방시설 점검 학습 앱</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans KR', sans-serif;
+        }
+        .answer-item {
+            transition: all 0.2s ease;
+        }
+        .answer-item:hover {
+            transform: translateX(4px);
+        }
+        .fade-in {
+            animation: fadeIn 0.3s ease-in;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .slide-up {
+            animation: slideUp 0.4s ease-out;
+        }
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .image-preview {
+            max-height: 300px;
+            object-fit: contain;
+        }
+        .image-drop-area {
+            border: 2px dashed #a5b4fc;
+            background: #f5f3ff;
+            transition: all 0.2s;
+        }
+        .image-drop-area:hover {
+            border-color: #6366f1;
+            background: #ede9fe;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen p-4">
+    <div id="root"></div>
+
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        // 초기 데이터
+        const initialQAData = [
+            {
+                id: 1,
+                title: "거설배구표변지수/설적",
+                question: "소화기 점검 항목",
+                answers: [
+                    "거주자 등이 손쉽게 사용할 수 있는 장소에 설치되어 있는지 여부",
+                    "설치높이 적합 여부",
+                    "배치거리(보행거리 소형 20m 이내, 대형 30m 이내) 적합 여부",
+                    "구획된 거실(바닥면적 33㎡ 이상)마다 소화기 설치 여부",
+                    "소화기 표지 설치상태 적정 여부",
+                    "소화기의 변형·손상 또는 부식 등 외관의 이상 여부",
+                    "지시압력계(녹색범위)의 적정 여부",
+                    "수동식 분말소화기 내용연수(10년) 적정 여부",
+                    "설치수량 적정 여부",
+                    "적응성 있는 소화약제 사용 여부"
+                ]
+            },
+            {
+                id: 2,
+                title: "주거용 주방 자동소화장치",
+                question: "수소방감탐차",
+                answers: [
+                    "수신부의 설치상태 적정 및 정상(예비전원, 음향장치 등) 작동",
+                    "소화약제의 지시압력 적정 및 외관의 이상 여부",
+                    "소화약제 방출구의 설치상태 적정 및 외관의 이상 여부",
+                    "감지부 설치상태 적정 여부",
+                    "탐지부 설치상태 적정 여부",
+                    "차단장치 설치상태 적정 및 정상 작동 여부"
+                ]
+            },
+            {
+                id: 3,
+                title: "상업용 주방 자동소화장치",
+                question: "소후동",
+                answers: [
+                    "소화약제의 지시압력 적정 및 외관의 이상 여부",
+                    "후드 및 덕트에 감지부와 분사헤드의 설치상태 적정 여부",
+                    "수동기동장치의 설치상태 적정 여부"
+                ]
+            },
+            {
+                id: 4,
+                title: "캐비닛형 자동소화장치",
+                question: "분화개",
+                answers: [
+                    "분사헤드의 설치상태 적합 여부",
+                    "화재감지기 설치상태 적합 여부 및 정상 작동 여부",
+                    "개구부 및 통기구 설치 시 자동폐쇄장치 설치 여부"
+                ]
+            },
+            {
+                id: 5,
+                title: "가스·분말·고체에어로졸 자동소화장치",
+                question: "수소감",
+                answers: [
+                    "수신부의 정상(예비전원, 음향장치 등) 작동 여부",
+                    "소화약제의 지시압력 적정 및 외관의 이상 여부",
+                    "감지부(또는 화재감지기) 설치상태 적정 및 정상 작동 여부"
+                ]
+            },
+            {
+                id: 6,
+                title: "가스·분말·고체에어로졸 자동소화장치",
+                question: "주보 (옥내/SP/조기)",
+                answers: [
+                    "주된수원의 유효수량 적정 여부(겸용설비 포함)",
+                    "보조수원(옥상)의 유효수량 적정 여부"
+                ]
+            },
+            {
+                id: 7,
+                title: "가스·분말·고체에어로졸 자동소화장치",
+                question: "겸포 (간이/물분무/포/옥외)",
+                answers: [
+                    "수원의 유효수량 적정 여부(겸용설비 포함)"
+                ]
+            },
+            {
+                id: 8,
+                title: "가스·분말·고체에어로졸 자동소화장치",
+                question: "수주수첨 (미분무)",
+                answers: [
+                    "수원의 수질 및 필터(또는 스트레이너) 설치 여부",
+                    "주배관 유입측 필터(또는 스트레이너) 설치 여부",
+                    "수원의 유효수량 적정 여부",
+                    "첨가제의 양 산정 적정 여부(첨가제를 사용한 경우)"
+                ]
+            },
+            {
+                id: 9,
+                title: "가스·분말·고체에어로졸 자동소화장치",
+                question: "동수외조표다수 (옥내/SP/조기/물분무/포/옥외)",
+                answers: [
+                    "동결방지조치 상태 적정 여부",
+                    "수위계 설치상태 적정 또는 수위 확인 가능 여부",
+                    "수조 외측 고정사다리 설치상태 적정 여부(바닥보다 낮은 경우",
+                    "실내설치 시 조명설비 설치상태 적정 여부",
+                    "\"옥내소화전설비용 수조\"표지 설치상태 적정 여부",
+                    "다른 소화설비와 겸용 시 겸용설비의 이름 표시한 표지 설치상태 적",
+                    "수조-수직배관 접속부분\"옥내소화전설비용 배관\"표지 설치상태 적",
+                    "자동급수장치 설치 여부 + (동수외조표다수)  (간이)",
+                    "전용 수조 사용 여부 + (동수외조표다수) (미분무)"
+                ]
+            },
+            {
+                id: 10,
+                title: "펌프방식",
+                question: "SP/간이/조기/물분무/포 (옥내/옥외)",
+                answers: [
+                    "동결방지조치 상태 적정 여부",
+                    "성능시험배관을 통한 펌프 성능시험 적정 여부",
+                    "다른 소화설비와 겸용인 경우 펌프 성능 확보 가능 여부",
+                    "펌프 흡입측 연성계·진공계 및 토출측 압력계 등 부속장치의 변형·손상 유무",
+                    "기동장치 적정 설치 및 기동압력 설정 적정 여부",
+                    "물올림장치 설치 적정(전용 여부, 유효수량, 배관구경, 자동급수) 여부",
+                    "충압펌프 설치 적정(토출압력, 정격토출량) 여부",
+                    "펌프의 토출측 개폐밸브 및 체크밸브 설치 적정 여부",
+                    "기동용수압개폐장치 설치 적정(감도조정, 압력스위치 설정압력) 여부",
+                    "수압시험 시 성능 적정(압력계 기준, 시험배관 기준) 여부",
+                    "정격부하 운전 시의 펌프 성능 적정 여부",
+                    "수압시험 시 체절운전 토출압력 적정 여부",
+                    "펌프의 정상작동(자동/수동) 여부"
+                ]
+            }
+        ];
+
+        function App() {
+            const [qaData, setQaData] = useState(() => {
+                const saved = localStorage.getItem('qaData');
+                return saved ? JSON.parse(saved) : initialQAData;
+            });
+            
+            const [currentQuestion, setCurrentQuestion] = useState(null);
+            const [showAnswer, setShowAnswer] = useState(false);
+            const [isEditMode, setIsEditMode] = useState(false);
+            const [editingId, setEditingId] = useState(null);
+            const [editForm, setEditForm] = useState({ title: '', question: '', answers: '', image: null });
+            const [stats, setStats] = useState(() => {
+                const saved = localStorage.getItem('stats');
+                return saved ? JSON.parse(saved) : { correct: 0, total: 0 };
+            });
+            const imageInputRef = useRef(null);
+
+            useEffect(() => {
+                localStorage.setItem('qaData', JSON.stringify(qaData));
+            }, [qaData]);
+
+            useEffect(() => {
+                localStorage.setItem('stats', JSON.stringify(stats));
+            }, [stats]);
+
+            const selectRandomQuestion = () => {
+                const randomIndex = Math.floor(Math.random() * qaData.length);
+                setCurrentQuestion(qaData[randomIndex]);
+                setShowAnswer(false);
+            };
+
+            const handleShowAnswer = () => {
+                setShowAnswer(true);
+                setStats(prev => ({ ...prev, total: prev.total + 1, correct: prev.correct + 1 }));
+            };
+
+            const handleHideAnswer = () => setShowAnswer(false);
+
+            const resetStats = () => {
+                if (window.confirm('정말 통계를 초기화하시겠습니까?')) {
+                    setStats({ correct: 0, total: 0 });
+                }
+            };
+
+            const exportData = () => {
+                const dataStr = JSON.stringify(qaData, null, 2);
+                const jsonBlob = new Blob([dataStr], { type: 'application/json' });
+                const jsonUrl = URL.createObjectURL(jsonBlob);
+                const jsonLink = document.createElement('a');
+                jsonLink.href = jsonUrl;
+                jsonLink.download = '소방시설_학습데이터.json';
+                jsonLink.click();
+                setTimeout(() => {
+                    const txtBlob = new Blob([dataStr], { type: 'text/plain' });
+                    const txtUrl = URL.createObjectURL(txtBlob);
+                    const txtLink = document.createElement('a');
+                    txtLink.href = txtUrl;
+                    txtLink.download = '소방시설_학습데이터.txt';
+                    txtLink.click();
+                    setTimeout(() => {
+                        URL.revokeObjectURL(jsonUrl);
+                        URL.revokeObjectURL(txtUrl);
+                    }, 100);
+                }, 100);
+            };
+
+            const importData = (event) => {
+                const file = event.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                const fileName = file.name.toLowerCase();
+                reader.onload = (e) => {
+                    try {
+                        let importedData;
+                        if (fileName.endsWith('.json') || fileName.endsWith('.txt')) {
+                            importedData = JSON.parse(e.target.result);
+                        } else {
+                            alert('지원하지 않는 파일 형식입니다. JSON 또는 TXT 파일만 가능합니다.');
+                            return;
+                        }
+                        if (Array.isArray(importedData) && importedData.length > 0) {
+                            setQaData(importedData);
+                            alert('데이터를 성공적으로 가져왔습니다!');
+                        } else {
+                            alert('올바른 데이터 형식이 아닙니다.');
+                        }
+                    } catch (error) {
+                        alert('파일을 읽는 중 오류가 발생했습니다: ' + error.message);
+                    }
+                };
+                reader.readAsText(file);
+                event.target.value = '';
+            };
+
+            const startEdit = (item) => {
+                setEditingId(item.id);
+                setEditForm({
+                    title: item.title,
+                    question: item.question,
+                    answers: item.answers.join('\n'),
+                    image: item.image || null
+                });
+            };
+
+            // 이미지 파일 → base64 변환
+            const handleImageUpload = (file) => {
+                if (!file) return;
+                if (!file.type.startsWith('image/')) {
+                    alert('이미지 파일만 업로드 가능합니다.');
+                    return;
+                }
+                if (file.size > 5 * 1024 * 1024) {
+                    alert('파일 크기는 5MB 이하만 가능합니다.');
+                    return;
+                }
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    setEditForm(prev => ({ ...prev, image: e.target.result }));
+                };
+                reader.readAsDataURL(file);
+            };
+
+            const handleImageInputChange = (e) => {
+                handleImageUpload(e.target.files[0]);
+                e.target.value = '';
+            };
+
+            // 드래그&드롭
+            const handleDrop = (e) => {
+                e.preventDefault();
+                const file = e.dataTransfer.files[0];
+                handleImageUpload(file);
+            };
+
+            const removeImage = () => {
+                setEditForm(prev => ({ ...prev, image: null }));
+            };
+
+            const saveEdit = () => {
+                const updatedData = qaData.map(item =>
+                    item.id === editingId
+                        ? {
+                            ...item,
+                            title: editForm.title,
+                            question: editForm.question,
+                            answers: editForm.answers.split('\n').filter(a => a.trim()),
+                            image: editForm.image || null
+                        }
+                        : item
+                );
+                setQaData(updatedData);
+                // 현재 학습 중인 질문도 업데이트
+                if (currentQuestion && currentQuestion.id === editingId) {
+                    const updated = updatedData.find(i => i.id === editingId);
+                    setCurrentQuestion(updated);
+                }
+                setEditingId(null);
+                alert('저장되었습니다!');
+            };
+
+            const deleteItem = (id) => {
+                if (window.confirm('정말 삭제하시겠습니까?')) {
+                    setQaData(qaData.filter(item => item.id !== id));
+                }
+            };
+
+            const addNew = () => {
+                const newId = Math.max(...qaData.map(item => item.id), 0) + 1;
+                const newItem = {
+                    id: newId,
+                    title: '새 항목',
+                    question: '질문을 입력하세요',
+                    answers: ['답변을 입력하세요'],
+                    image: null
+                };
+                setQaData([...qaData, newItem]);
+                startEdit(newItem);
+            };
+
+            return (
+                <div className="max-w-4xl mx-auto">
+                    {/* 헤더 */}
+                    <div className="bg-white rounded-2xl shadow-xl p-6 mb-6">
+                        <h1 className="text-3xl font-bold text-center text-indigo-900 mb-4">
+                            🔥 소방시설 점검 학습 앱
+                        </h1>
+                        
+                        <div className="flex justify-center gap-3 mb-4">
+                            <div className="bg-blue-100 px-4 py-2 rounded-lg">
+                                <span className="text-blue-800 font-semibold">📊 학습 횟수: {stats.total}</span>
+                            </div>
+                            <div className="bg-green-100 px-4 py-2 rounded-lg">
+                                <span className="text-green-800 font-semibold">✅ 정답: {stats.correct}</span>
+                            </div>
+                        </div>
+
+                        <div className="flex flex-wrap justify-center gap-3">
+                            <button onClick={selectRandomQuestion} className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-lg font-semibold shadow-lg transform hover:scale-105 transition">
+                                🎲 랜덤 질문
+                            </button>
+                            <button onClick={() => setIsEditMode(!isEditMode)} className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg font-semibold shadow-lg transform hover:scale-105 transition">
+                                {isEditMode ? '📖 학습모드' : '✏️ 편집모드'}
+                            </button>
+                            <button onClick={resetStats} className="bg-red-600 hover:bg-red-700 text-white px-4 py-3 rounded-lg font-semibold shadow-lg transform hover:scale-105 transition">
+                                🔄 통계 초기화
+                            </button>
+                            <button onClick={exportData} className="bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded-lg font-semibold shadow-lg transform hover:scale-105 transition">
+                                💾 내보내기
+                            </button>
+                            <label className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-lg font-semibold shadow-lg transform hover:scale-105 transition cursor-pointer">
+                                📁 가져오기
+                                <input type="file" accept=".json,.txt" onChange={importData} className="hidden" />
+                            </label>
+                        </div>
+                    </div>
+
+                    {/* 학습 모드 */}
+                    {!isEditMode && currentQuestion && (
+                        <div className="bg-white rounded-2xl shadow-xl p-8 mb-6 slide-up">
+                            <div className="mb-4">
+                                <span className="bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full text-sm font-semibold">
+                                    {currentQuestion.title}
+                                </span>
+                            </div>
+                            
+                            <h2 className="text-2xl font-bold text-gray-800 mb-4">
+                                📋 {currentQuestion.question}
+                            </h2>
+
+                            {!showAnswer ? (
+                                <button
+                                    onClick={handleShowAnswer}
+                                    className="w-full bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white py-4 rounded-xl font-bold text-lg shadow-lg transform hover:scale-102 transition"
+                                >
+                                    💡 답변 보기
+                                </button>
+                            ) : (
+                                <div className="space-y-3 fade-in">
+                                    {/* 답변 시 이미지 표시 */}
+                                    {currentQuestion.image && (
+                                        <div className="mb-4 flex justify-center">
+                                            <img
+                                                src={currentQuestion.image}
+                                                alt="질문 이미지"
+                                                className="image-preview rounded-xl border border-indigo-100 shadow"
+                                            />
+                                        </div>
+                                    )}
+                                    <div className="flex justify-between items-center mb-4">
+                                        <h3 className="font-bold text-lg text-indigo-900">✅ 점검 항목:</h3>
+                                        <button
+                                            onClick={handleHideAnswer}
+                                            className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg font-semibold shadow-md transform hover:scale-105 transition"
+                                        >
+                                            👁️ 답변 가리기
+                                        </button>
+                                    </div>
+                                    {currentQuestion.answers.map((answer, index) => (
+                                        <div key={index} className="answer-item bg-gradient-to-r from-green-50 to-emerald-50 p-4 rounded-lg border-l-4 border-green-500">
+                                            <span className="font-semibold text-green-700 mr-2">{index + 1}.</span>
+                                            <span className="text-gray-800">{answer}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* 편집 모드 */}
+                    {isEditMode && (
+                        <div className="space-y-4">
+                            <div className="bg-white rounded-2xl shadow-xl p-6">
+                                <div className="flex justify-between items-center mb-4">
+                                    <h2 className="text-2xl font-bold text-gray-800">📝 질문 목록</h2>
+                                    <button onClick={addNew} className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-semibold shadow-lg">
+                                        ➕ 새 항목 추가
+                                    </button>
+                                </div>
+
+                                <div className="space-y-3">
+                                    {qaData.map((item) => (
+                                        <div key={item.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition">
+                                            {editingId === item.id ? (
+                                                <div className="space-y-3">
+                                                    <input
+                                                        type="text"
+                                                        value={editForm.title}
+                                                        onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+                                                        className="w-full border border-gray-300 rounded-lg px-3 py-2 font-semibold"
+                                                        placeholder="제목"
+                                                    />
+                                                    <input
+                                                        type="text"
+                                                        value={editForm.question}
+                                                        onChange={(e) => setEditForm({ ...editForm, question: e.target.value })}
+                                                        className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                                                        placeholder="질문"
+                                                    />
+                                                    <textarea
+                                                        value={editForm.answers}
+                                                        onChange={(e) => setEditForm({ ...editForm, answers: e.target.value })}
+                                                        className="w-full border border-gray-300 rounded-lg px-3 py-2 h-32"
+                                                        placeholder="답변 (각 줄마다 하나씩)"
+                                                    />
+
+                                                    {/* 이미지 업로드 영역 */}
+                                                    <div>
+                                                        <p className="text-sm font-semibold text-gray-700 mb-2">🖼️ 이미지 첨부 (선택사항)</p>
+                                                        {editForm.image ? (
+                                                            <div className="relative inline-block">
+                                                                <img
+                                                                    src={editForm.image}
+                                                                    alt="미리보기"
+                                                                    className="image-preview rounded-lg border border-indigo-200 shadow"
+                                                                />
+                                                                <button
+                                                                    onClick={removeImage}
+                                                                    className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white rounded-full w-7 h-7 flex items-center justify-center text-sm font-bold shadow"
+                                                                    title="이미지 삭제"
+                                                                >
+                                                                    ✕
+                                                                </button>
+                                                            </div>
+                                                        ) : (
+                                                            <div
+                                                                className="image-drop-area rounded-xl p-6 text-center cursor-pointer"
+                                                                onClick={() => imageInputRef.current && imageInputRef.current.click()}
+                                                                onDragOver={(e) => e.preventDefault()}
+                                                                onDrop={handleDrop}
+                                                            >
+                                                                <div className="text-4xl mb-2">📷</div>
+                                                                <p className="text-indigo-700 font-semibold">클릭하거나 이미지를 여기에 드래그하세요</p>
+                                                                <p className="text-gray-400 text-sm mt-1">JPG, PNG, GIF, WEBP · 최대 5MB</p>
+                                                            </div>
+                                                        )}
+                                                        <input
+                                                            ref={imageInputRef}
+                                                            type="file"
+                                                            accept="image/*"
+                                                            onChange={handleImageInputChange}
+                                                            className="hidden"
+                                                        />
+                                                        {editForm.image && (
+                                                            <button
+                                                                onClick={() => imageInputRef.current && imageInputRef.current.click()}
+                                                                className="mt-2 text-sm text-indigo-600 hover:underline"
+                                                            >
+                                                                🔄 이미지 교체
+                                                            </button>
+                                                        )}
+                                                    </div>
+
+                                                    <div className="flex gap-2">
+                                                        <button onClick={saveEdit} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg">
+                                                            저장
+                                                        </button>
+                                                        <button onClick={() => setEditingId(null)} className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg">
+                                                            취소
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <div>
+                                                    <div className="flex justify-between items-start mb-2">
+                                                        <div className="flex-1 flex gap-4 items-start">
+                                                            {item.image && (
+                                                                <img src={item.image} alt="썸네일" className="w-16 h-16 object-cover rounded-lg border border-gray-200 flex-shrink-0" />
+                                                            )}
+                                                            <div>
+                                                                <h3 className="font-bold text-indigo-900">{item.title}</h3>
+                                                                <p className="text-gray-700 mt-1">{item.question}</p>
+                                                                <p className="text-sm text-gray-500 mt-2">
+                                                                    답변 {item.answers.length}개
+                                                                    {item.image && <span className="ml-2 text-indigo-400">📷 이미지 있음</span>}
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex gap-2 flex-shrink-0">
+                                                            <button onClick={() => startEdit(item)} className="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded text-sm">
+                                                                수정
+                                                            </button>
+                                                            <button onClick={() => deleteItem(item.id)} className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm">
+                                                                삭제
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* 시작 안내 */}
+                    {!isEditMode && !currentQuestion && (
+                        <div className="bg-white rounded-2xl shadow-xl p-12 text-center slide-up">
+                            <div className="text-6xl mb-4">🎯</div>
+                            <h2 className="text-2xl font-bold text-gray-800 mb-4">학습을 시작하세요!</h2>
+                            <p className="text-gray-600 mb-6">
+                                "랜덤 질문" 버튼을 클릭하여 시작하거나<br />
+                                "편집모드"에서 내용을 수정할 수 있습니다.
+                            </p>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
+</body>
+</html>
